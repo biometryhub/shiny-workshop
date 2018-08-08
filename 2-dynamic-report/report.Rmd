@@ -1,0 +1,39 @@
+---
+title: "Dynamic report"
+output: html_document
+params:
+  n: NA
+---
+
+```{r eval = FALSE, echo = FALSE}
+# For PDF output, change the header to have "output: pdf_document".
+#
+# Note that due to an issue in rmarkdown, the default value of a parameter in
+# the header cannot be `NULL`, so I used a default of `NA` for the default value
+# of `n`.
+```
+
+```{r}
+# The `params` object is available in the document.
+params$n
+```
+
+A plot of `params$n` random points.
+
+```{r}
+plot(rnorm(params$n), rnorm(params$n))
+```
+
+We can also add the plot from Shiny in using (almost) the same code:
+
+```{r}
+library(ggplot2)
+p <- ggplot(faithful, aes(x=waiting)) + geom_histogram(bins = params$n) + theme_bw()
+print(p)
+```
+
+And do extra things to it of course...
+
+```{r}
+p + labs(title = "An informative Title") + scale_y_reverse()
+```
