@@ -1,0 +1,552 @@
+---
+title: "Shiny for SAGI"
+author: "Peter Kasprzak"
+date: "9 August 2018"
+runtime: shiny
+output: html_document
+header-includes:
+- \usepackage{pandoc}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_chunk$set(warning=FALSE)
+```
+
+# About Shiny
+Shiny is a framework developed by RStudio to build interactive web applications straight from R that was released on the 23/08/2017.
+
+Shiny makes this incredibly easy with automatic ``reactive'' binding between inputs and outputs and extensive prebuilt widgets to make it possible to build beautiful, responsive, and powerful applications with minimal effort. (from Vignette)
+
+The definitive tutorial source is https://shiny.rstudio.com/tutorial/
+
+
+# How to use Shiny
+The first step is to load shiny into your Rstudio packages.
+```{r package, echo=TRUE,eval=FALSE}
+install.packages("shiny")
+```
+
+Next is to select the `File`, `New File`, `Shiny Web App` option in R.  This will take you to a new pop up with the choice of a single file, or multiple file creation choice.  While all Shiny apps are all saved with the extension `.R`,  The choice of the single file will put them together in one `.R` file in the following way.
+
+```{r shinystart, echo=TRUE,eval=FALSE}
+library(shiny)
+ui <- fluidPage()
+server <- function(input, output, session) {}
+shinyApp(ui = ui, server = server)
+```
+This is then run with the call via the `Run App` button in Rstudio, which is equivalent to making the console call of `shiny::runApp()`
+
+The file MUST be named `app.R` and stored in an appropriate directory without any other `app.R` files
+
+The UI commands are all inserted in the fluidPage function, while the server commands are enclosed within the curly braces.
+
+This format is best for apps with smaller amounts of total code.  As both `Server` and `UI` sections become larger, it is generally easier to split these two.  This is done by choosing the multiple file option at the begining step when choosing a `New File`.  When splitting the files the UI file MUST be named `ui.R` and the server file `server.R`.  These are to be kept in the same folder, and can not share a folder with any other identically named files.  It can share a folder with a `app.R` file however.
+
+The files are then run via the `Run App` button again, which is equivalent to making the console call of runApp('FilePathNameToTheDirectoryThatHasTheFile').
+
+In this case there is no need to to use the handles ui <- or server <-.  The function call is sufficient.
+
+```{r shinystartsplit, echo=TRUE,eval=FALSE}
+library(shiny)
+fluidPage()
+shinyServer(function(input, output, session) {})
+```
+As with other packages, all picture files, style files etc must be kept in the same folder as the application.
+
+## Scope
+The code that you place inside the server function is called once per session.
+Placing objects in the `server.R` file but above the call to shinyServer() will allow objects to be viewed over all sessions.  This would be used for large data sets, or function calls, or packages, that are to be used over all sessions, which must be stored in the same folder as the call functions.
+
+# Global Objects
+These can be defined in a separate file folder called `global.R` and must be stored in the same directory.  The only difference between `global.R` files and functions/packages called outside of `shinyServer()` is that  `global.R` can be read by the `ui.R` file.  This is not commonly used, especially in simple to intermediate applications.
+
+## Creating your first app
+
+
+First ensure you have Rstudio loaded and updated, the Shiny package installed.  Create a new document either via the `New File` option, or manually, and store it in an appropriate folder.
+
+The data used for this example is the sampling data SamplingStrategies.csv
+
+
+Download the data and store it in the same folder as your `app.r` file.
+
+In your `app.r` file code the following:
+
+```{r firstapp, echo=TRUE,eval=FALSE}
+library(shiny)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+ui <- fluidPage()
+server <- function(input, output, session) {
+}
+shinyApp(ui = ui, server = server)
+```
+
+Running the app at this stage will give you a blank page.  We haven't told the app to do anything as yet.
+
+## UI layout
+
+There are many different options to setting out the fluid page.  The first and the most basic is simply having a front page with all information displayed.
+
+The sidebar position defaults to left, however it is possible to swap the sides as shown.
+
+```{r frontpagedisp,echo = TRUE}
+library(shiny)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(position = "left",
+sidebarPanel("our inputs will go here"),
+mainPanel("the results will go here")
+))
+
+server <- function(input, output, session) {}
+
+shinyApp(ui = ui, server = server)
+```
+
+## Adding the the UI layout
+
+There are many different options for user input.  Here are a section of some and their respective code.
+```{r frontpageinputs,echo = TRUE}
+library(shiny)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(
+sidebarPanel(
+actionButton("action", "Proceed after clicking"),
+br(),br(),br(),
+radioButtons("RADIO", "Choose", c("Choice1", "Choice2")),
+numericInput("INPUT","Numeric Input",value = 0,min = 0,max = 10,step = 0.1)
+),
+mainPanel(
+textInput("CAPTION", "Caption", "Write anything here"),
+selectInput('XCOL', 'X Variable', "Name of variable"),
+sliderInput(
+"n1","Number of samples",min = 1,max = 100,value = 20,pre = "$"))
+))
+
+server <- function(input, output, session) {}
+
+shinyApp(ui = ui, server = server)
+```
+
+Note that the `value` label is the value that you wish to be set by default.  This can be left blank if you wish.
+The `step` label is used to specify increments.  This can be left blank as well.
+The `pre` label is used to affix dollar signs or percentage signs to the slider.
+
+For a comprehensive list of input types please refer to the official Shiny website.
+
+The action button is very handy to halt portions of code from proceeding until the button is pushed.  
+
+```{r UIcode,echo = TRUE}
+library(shiny)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(
+sidebarPanel(
+sliderInput("RANGE", "range", 0, 100, c(25, 40), pre = "$"),
+radioButtons("CLUSTER","cluster",
+             choices = c("Yellow", "Blue", "Green", "Orange"),selected = "Green"),
+selectInput("DATA","data",
+            choices = c("Xdata", "Ydata"))
+),
+mainPanel("the results will go here")
+))
+
+server <- function(input, output, session) {}
+
+shinyApp(ui = ui, server = server)
+```
+
+Note here I have changed the `sliderInput` to select a range of data, rather than a single value.  The only change in the code for this is to specify a starting vector of 2 values rather than a single start value.
+
+## Server Code
+The majority of the server code is exactly the same as R language.  There are important differences however.  First, we shall see how to link the simple inputs from our UI to sort a table.  In the UI code, after input function is called, the first argument which I have put in capslock is the name of the variable that is selected by the user.
+
+First we tell the UI that we are going to want it to display a plot.  To begin with we will do a simple histogram plot based on one of our slider inputs.
+
+We choose the plot to be displayed in the main panel using the `plotOutput` command.  If we were to display a table we would use the `tableOutput` command etc.  Note the name of the object must be wrapped in quotations.
+
+```{r servercode,echo = TRUE}
+library(shiny)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(
+sidebarPanel(
+sliderInput("RANGE", "range", 0, 100, c(25, 40), pre = "$"),
+radioButtons("CLUSTER","cluster",
+             choices = c("Yellow", "Blue", "Green", "Orange"),selected = "Green"),
+selectInput("XDATA","xdata",
+            choices = c("Xdata", "Ydata")),
+selectInput("YDATA","ydata",
+            choices = c("Xdata", "Ydata"))
+),
+mainPanel(
+  plotOutput("myplot"))
+))
+
+server <- function(input, output, session) {}
+
+shinyApp(ui = ui, server = server)
+```
+
+
+If you were to run the code at this stage, the words **myplot** would appear at the place of plot.  This is the place holder.  Now we must construct a plot.  Lets start with a simple scatter plot.
+
+Note, you will need to use the `aes_string` command instead of the regular `aes` command for ggplot.  This is because the `input$tag` command returns the name in quotation marks.
+
+If you are using ggvis you will need `aes(as.name(input$Group_select))`.
+
+Note that `tidyverse` works very well with shiny, and you can use the `input$tag` name straight into the R code with no wrappers or add ons.
+
+Whenever you wish to output another object, it is as easy as using a comma after the last and adding another render plot.
+
+Note that when you change the input values on either the plot or the table, the update is automatic.  It is possible to make Shiny wait for you to push a button before executing commands, and we will get to that later.
+```{r scatterplot,echo = TRUE}
+library(shiny)
+library(tidyverse)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(
+sidebarPanel("You can still write anything you want here",
+sliderInput("RANGE", "range", 0, 100, c(25, 40), pre = "$"),
+radioButtons("CLUSTER","cluster",
+             choices = c("Yellow", "Blue", "Green", "Orange"),selected = "Green"),
+selectInput("XDATA","xdata",
+            choices = c("Xdata", "Ydata")),
+selectInput("YDATA","ydata",
+            choices = c("Xdata", "Ydata"))
+),
+
+mainPanel(  "You can still write anything you want here as well",
+  plotOutput("myplot"),
+  tableOutput("mytable"))
+))
+
+server <- function(input, output, session) {
+  
+  output$myplot <- renderPlot({
+    ggplot(bcl,aes_string(x = input$XDATA,y=input$YDATA) )+
+      geom_point()
+  })
+  
+  output$mytable <- renderTable({
+    bcl %>% filter(Cluster == input$CLUSTER)
+  })
+
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+All the general input commands work in the same way.  One you have mastered the basics of these inputs, then you can build simple apps that allow user interactivity quickly and easily.
+
+## Splitting the app into different tabs/pages
+As you can see we get very busy very quickly.  There are several options in manipulating the app with the quickest and simplest being inserting tabs into the main page.
+
+This is done by simply partitioning the main page with the command `tabPanel` command.
+
+```{r splitpage,echo = TRUE}
+library(shiny)
+library(tidyverse)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(
+sidebarPanel("You can still write anything you want here",
+sliderInput("RANGE", "range", 0, 100, c(25, 40), pre = "$"),
+radioButtons("CLUSTER","cluster",
+             choices = c("Yellow", "Blue", "Green", "Orange"),selected = "Green"),
+selectInput("XDATA","xdata",
+            choices = c("Xdata", "Ydata")),
+selectInput("YDATA","ydata",
+            choices = c("Xdata", "Ydata"))
+),
+
+mainPanel(
+  tabsetPanel(
+  tabPanel("Text","You can still write anything you want here as well"),
+  tabPanel("The plot",plotOutput("myplot")),
+  tabPanel("The table",tableOutput("mytable"))
+  ))
+))
+
+server <- function(input, output, session) {
+  
+  output$myplot <- renderPlot({
+    ggplot(bcl,aes_string(x = input$XDATA,y=input$YDATA) )+
+      geom_point()
+  })
+
+  output$mytable <- renderTable({
+    bcl %>% filter(Cluster == input$CLUSTER)
+  })
+
+}
+
+shinyApp(ui = ui, server = server)
+
+```
+
+This allows you to keep the same side panel and split the main panel.  In much the same way you are able to split the side panel.
+
+## Reactivity
+Reactivity is a very important part of Shiny.  In simple terms, reactivity allows an entire chain of variables to be updated when the initial reactive variable changes.  More technically it is a function, wrapped in a S3 class "reactive".  To declare a reactive variable use the expression `reactive({})`.  Now, like a function in R, when you are using the reactive variable it must be accessed like a function `mynameReactive()`, ie accessed like a list.  In this way `input$` type commands can access specific data, which is returned in a data frame.  Recall when using these in ggplot2 we must use the `aes_string` command.
+
+```{r reactive,echo = TRUE}
+library(shiny)
+library(tidyverse)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(
+sidebarPanel("You can still write anything you want here",
+sliderInput("RANGE", "range", 0, 100, c(25, 40), pre = "$"),
+radioButtons("CLUSTER","cluster",
+             choices = c("Yellow", "Blue", "Green", "Orange"),selected = "Green"),
+selectInput("XDATA","xdata",
+            choices = c("Xdata", "Ydata")),
+selectInput("YDATA","ydata",
+            choices = c("Xdata", "Ydata"))
+),
+
+mainPanel(
+  tabsetPanel(
+  tabPanel("The plot",plotOutput("myplot")),
+  tabPanel("The table",tableOutput("mytable")),
+  tabPanel("The plot again",plotOutput("myplot2"))
+  ))
+))
+
+server <- function(input, output, session) {
+  
+      filtered <- reactive({
+bcl %>% filter(Cluster == input$CLUSTER)
+})
+
+  
+  output$myplot <- renderPlot({
+    ggplot(bcl,aes_string(x = input$XDATA,y=input$YDATA) )+
+      geom_point()
+  })
+  
+    output$myplot2 <- renderPlot({
+      ggplot(filtered(),aes_string(x=input$XDATA,y = input$YDATA))+geom_point()
+  })
+  
+  output$mytable <- renderTable({
+    filtered()[input$XDATA]
+  })
+  
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+We must now remember that reactive variables can only be used inside reactive environments.  All the `render` functions are reactive, and so is the `observe` and `reactive` functions.  It you type in `print$inputCLUSTER` you will recive the error "Operation not allowed without an active reactive context. (You tried to do something that can only be done from inside a reactive expression or observer.)".  This is your clue that it is outside of a reactive functtion.
+
+Note here that the `observe({print(input$CLUSTER)})` command prints out to the console.  This is a very handy way to check what is going on inside your Shiny code for simple debugging.
+
+This `filtered()` object is now usable anywhere in the server code.  This is a very good way to set up initial data filtering via user inputs, and then to use the resulting tables throughout the application.
+
+## Using reactive variables inside regular code
+
+Now that the data is in a reactive function, you will find situations where it is not as straight forward simply to call the variable.
+
+```{r reactive2,echo = TRUE}
+library(shiny)
+library(tidyverse)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(
+sidebarPanel("You can still write anything you want here",
+sliderInput("RANGE", "range", 0, 100, c(25, 40), pre = "$"),
+radioButtons("CLUSTER","cluster",
+             choices = c("Yellow", "Blue", "Green", "Orange"),selected = "Green"),
+selectInput("XDATA","xdata",
+            choices = c("Xdata", "Ydata")),
+selectInput("YDATA","ydata",
+            choices = c("Xdata", "Ydata"))
+),
+
+mainPanel(
+  tabsetPanel(
+  tabPanel("The plot",plotOutput("myplot")),
+  tabPanel("The table",tableOutput("mytable"),tableOutput("mytable2")),
+  tabPanel("The plot again",plotOutput("myplot2"))
+  ))
+))
+
+server <- function(input, output, session) {
+  
+      filtered <- reactive({
+bcl %>% filter(Cluster == input$CLUSTER)
+})
+
+  
+  output$myplot <- renderPlot({
+    ggplot(bcl,aes_string(x = input$XDATA,y=input$YDATA) )+
+      geom_point()
+  })
+  
+    output$myplot2 <- renderPlot({
+      ggplot(filtered(),aes_string(x=input$XDATA,y = input$YDATA))+geom_point()
+  })
+  
+  output$mytable <- renderTable({
+  c(max(filtered()[input$XDATA]),mean(filtered()[input$XDATA]))
+  })
+  
+    output$mytable2 <- renderTable({
+  c(max(filtered()[input$XDATA]),sapply(filtered()[input$YDATA],mean))
+  })
+  
+    
+    
+    
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+In this example, we are taking the maximum, and the mean of our variable.  Note in this case the max function will work, but the mean value will not.  This is because of the class of variable `filtered()` is.  It is in list format.  To find the mean of such a variable use the `sapply` function.  If you want to find (for example) the mean based on another column in the data set for sorting, then you will need the `tapply` function.  Your other vector must be in list format at this stage.  A data frame will throw and error.  The syntax for this would be `tapply(dataset[[input$XDATA]],list(Yourothervectorhere),mean)`
+
+Tidyverse works very well within this format.  The requirement to mutate, summarise etc will occur, and the new data set wont be in reactive format, but you will still wish to use the input variable to call a variable in the new data set (as long as you have kept the same name).  This is done slightly differently.
+```{r reactive3,echo = TRUE}
+library(shiny)
+library(tidyverse)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(
+sidebarPanel("You can still write anything you want here",
+sliderInput("RANGE", "range", 0, 100, c(25, 40), pre = "$"),
+radioButtons("CLUSTER","cluster",
+             choices = c("Yellow", "Blue", "Green", "Orange"),selected = "Green"),
+selectInput("XDATA","xdata",
+            choices = c("Xdata", "Ydata")),
+selectInput("YDATA","ydata",
+            choices = c("Xdata", "Ydata"))
+),
+
+mainPanel(
+  tabsetPanel(
+  tabPanel("The plot",plotOutput("myplot")),
+  tabPanel("The table",tableOutput("mytable"),tableOutput("mytable2")),
+  tabPanel("The plot again",plotOutput("myplot2"))
+  ))
+))
+
+server <- function(input, output, session) {
+  
+      filtered <- reactive({
+  bcl 
+})
+
+  
+  output$myplot <- renderPlot({
+    ggplot(bcl,aes_string(x = input$XDATA,y=input$YDATA) )+
+      geom_point()
+  })
+  
+    output$myplot2 <- renderPlot({
+      ggplot(filtered(),aes_string(x=input$XDATA,y = input$YDATA))+geom_point()
+  })
+  
+  output$mytable <- renderTable({
+  filtered2 <- filtered() 
+  
+  filtered3 <- filtered2 %>%
+    group_by(input$CLUSTER) %>%
+    summarise(
+      x = mean(filtered2[[input$XDATA]])
+    )
+
+  })
+  
+    
+    
+    
+}
+
+shinyApp(ui = ui, server = server)
+```
+In this contrived example, the filter via the initial input has been removed, and tidyverse is used to group the data via an input, and the mean function called on an inherited data frame using a input variable.  Note this is list notation which is the way to think about reactive functions
+
+## Dynamically changing input selections
+
+There are occassions that we would want to change the value of a slider, based on the input of a user.  Typical applications would be changing the choice of headings depending on the data set chosen from pre-selected options.  Or changing the final value of a slider depending on a previous input.
+
+```{r dynamic,echo = TRUE}
+library(shiny)
+library(tidyverse)
+bcl <- read.csv("SamplingStrategies.csv", stringsAsFactors = FALSE)
+
+ui <- fluidPage(titlePanel("Sampling Strategies"),
+sidebarLayout(
+  sidebarPanel(
+   numericInput("num", "Maximum slider value", 5),
+   uiOutput("slider"),
+radioButtons("CLUSTER","cluster",
+             choices = c("Yellow", "Blue", "Green", "Orange"),selected = "Green"),
+selectInput("XDATA","xdata",
+            choices = c("Xdata", "Ydata")),
+selectInput("YDATA","ydata",
+            choices = c("Xdata", "Ydata"))
+),
+
+mainPanel(
+  tabsetPanel(
+  tabPanel("New plot", plotOutput("coolplot")),
+  tabPanel("The plot",plotOutput("myplot")),
+  tabPanel("The table",tableOutput("mytable")),
+  tabPanel("The plot again",plotOutput("myplot2"))
+  ))
+))
+
+server <- function(input, output, session) {
+  
+      filtered <- reactive({
+bcl %>% filter(Cluster == input$CLUSTER)
+})
+  
+    output$slider <- renderUI({
+     sliderInput("slider", "Slider", min = 0,
+                 max = input$num, value = 5)
+   })
+
+   output$coolplot <- renderPlot({hist(rnorm(input$slider))})
+  
+  output$myplot <- renderPlot({
+    ggplot(bcl,aes_string(x = input$XDATA,y=input$YDATA) )+
+      geom_point()
+  })
+  
+    output$myplot2 <- renderPlot({
+      ggplot(filtered(),aes_string(x=input$XDATA,y = input$YDATA))+geom_point()
+  })
+  
+  output$mytable <- renderTable({
+    filtered()[input$XDATA]
+  })
+
+
+  
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+Note here, we can dynamically change the number of random values plotted to our histogram from another slider.  This same style links sliders of any related content.
+
+Thus with these simple tools, we are now ready to start building more complicated Shiny apps.  This tutorial has only scratched the surface however.  There are many more options and controls than are mentioned here.
+
+The main tutorial is given at (Shiny tutorial)[http://shiny.rstudio.com/]
